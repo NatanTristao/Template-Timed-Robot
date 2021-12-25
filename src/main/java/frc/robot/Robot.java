@@ -1,22 +1,30 @@
 package frc.robot;
 
+import edu.wpi.first.wpilibj.DigitalInput;
+import edu.wpi.first.wpilibj.GenericHID.Hand;
+import edu.wpi.first.wpilibj.PWMVictorSPX;
 import edu.wpi.first.wpilibj.SpeedControllerGroup;
 import edu.wpi.first.wpilibj.TimedRobot;
-import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.VictorSP;
 import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj.drive.DifferentialDrive;
 
+
 public class Robot extends TimedRobot {
-  private DifferentialDrive m_robotDrive;
-  private VictorSP motorRightOne, motorRightTwo,
-        motorLeftOne, motorLeftTwo;
+  private DifferentialDrive drive;
+  private VictorSP motorRightOne, motorRightTwo, motorLeftOne, motorLeftTwo;
   private SpeedControllerGroup motorsRight, motorsLeft;
-  private XboxController exampleXbox;
-  private final Timer m_timer = new Timer();
+  private XboxController driver;
+  private PWMVictorSPX motorController;
+  private DigitalInput toplimitSwitch;
+  private DigitalInput bottomlimitSwitch;
 
   @Override
   public void robotInit() {
+      motorController =  new PWMVictorSPX(0);
+      toplimitSwitch = new DigitalInput(1);
+      bottomlimitSwitch = new DigitalInput(2);
+
       motorRightOne = new VictorSP(0);
       motorRightTwo = new VictorSP(1);
       motorLeftOne = new VictorSP(2);
@@ -25,41 +33,40 @@ public class Robot extends TimedRobot {
       motorsRight = new SpeedControllerGroup(motorRightOne, motorRightTwo);
       motorsLeft = new SpeedControllerGroup(motorLeftOne, motorLeftTwo);
 
-      m_robotDrive = new DifferentialDrive(motorsRight, motorsLeft);
+      drive = new DifferentialDrive(motorsRight, motorsLeft);
   }
 
   @Override
-  public void autonomousInit() {
-    m_timer.reset();
-    m_timer.start();
-  }
+  public void autonomousInit() {}
 
   @Override
-  public void autonomousPeriodic() {
-    // Drive for 2 seconds
-    if (m_timer.get() < 2.0) {
-      m_robotDrive.arcadeDrive(0.5, 0.0);
-    } else {
-      m_robotDrive.stopMotor();
-    }
-  }
+  public void autonomousPeriodic() {}
 
   @Override
   public void teleopInit() {
-    exampleXbox = new XboxController(4);
-
+      driver = new XboxController(4);
   }
 
   @Override
   public void teleopPeriodic() {
-    m_robotDrive.arcadeDrive(exampleXbox.getY(), exampleXbox.getX());
-    
-    // Tank drive with a given left and right rates
-    m_robotDrive.tankDrive(-exampleXbox.getY(), -exampleXbox.getY());
-
-    // Arcade drive with a given forward and turn rate
-    m_robotDrive.arcadeDrive(-exampleXbox.getY(), exampleXbox.getX());
+      drive.arcadeDrive(driver.getY(Hand.kLeft), driver.getX(Hand.kRight));
+      setMotorSpeed(driver.getRawAxis(2));
   }
+  public void setMotorSpeed(double speed) {
+    if (speed > 0) {
+        if (toplimitSwitch.get()) {
+            motorController.set(0);
+        } else {
+            motorController.set(speed);
+        }
+    } else {
+        if (bottomlimitSwitch.get()) {
+            motorController.set(0);
+        } else {
+            motorController.set(speed);
+        }
+    }
+}
 
   @Override
   public void testInit() {}
